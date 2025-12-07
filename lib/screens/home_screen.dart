@@ -151,10 +151,19 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
              if (targetDate.title != null && targetDate.title!.isNotEmpty)
-                Text('${DateFormat.yMMMd().format(endDate)}', style: const TextStyle(color: Colors.grey)),
+                Text('${DateFormat.yMMMd().format(endDate)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text('Days Passed: $daysPassed (${_formatDuration(start, today)})'),
-            Text('Days Remaining: $daysRemaining (${_formatDuration(today, end)})'),
+            Row(
+              children: [
+                const Text('Days Remaining: '),
+                Text(
+                  '$daysRemaining',
+                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Text(' (${_formatDuration(today, end)})'),
+              ],
+            ),
             const SizedBox(height: 8),
             LinearProgressIndicator(value: percentPassed),
             const SizedBox(height: 4),
