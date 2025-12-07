@@ -24,14 +24,20 @@ class DateProvider with ChangeNotifier {
   }
 
   Future<void> addEndDate(DateTime date) async {
-    _dateData.endDates.add(date);
-    _dateData.endDates.sort(); // Keep them sorted
+    _dateData.endDates.add(TargetDate(date: date));
+    _dateData.endDates.sort(); // Keep them sorted. TargetDate implements Comparable.
     await _storageService.saveDateData(_dateData);
     notifyListeners();
   }
 
   Future<void> removeEndDate(int index) async {
     _dateData.endDates.removeAt(index);
+    await _storageService.saveDateData(_dateData);
+    notifyListeners();
+  }
+
+  Future<void> updateTargetDateTitle(int index, String title) async {
+    _dateData.endDates[index].title = title;
     await _storageService.saveDateData(_dateData);
     notifyListeners();
   }

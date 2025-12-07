@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../models/date_data.dart';
 import '../providers/date_provider.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -71,11 +72,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEndDateCard(BuildContext context, DateProvider provider, DateTime? startDate, DateTime endDate, int index) {
+  Widget _buildEndDateCard(BuildContext context, DateProvider provider, DateTime? startDate, TargetDate targetDate, int index) {
     if (startDate == null) {
       return Card(
         child: ListTile(
-          title: Text(DateFormat.yMMMd().format(endDate)),
+          title: Text(DateFormat.yMMMd().format(targetDate.date)),
           subtitle: const Text('Please set a start date to see calculations.'),
           trailing: IconButton(
             icon: const Icon(Icons.delete),
@@ -86,6 +87,7 @@ class HomeScreen extends StatelessWidget {
     }
 
     final now = DateTime.now();
+    final endDate = targetDate.date;
     // Normalize dates to ignore time components for day calculations
     final start = DateTime(startDate.year, startDate.month, startDate.day);
     final end = DateTime(endDate.year, endDate.month, endDate.day);
@@ -122,16 +124,34 @@ class HomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${DateFormat.yMMMd().format(endDate)} (Total: $totalDays days)',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Expanded(
+                  child: Row(
+                    children: [
+                       Text(
+                        targetDate.title != null && targetDate.title!.isNotEmpty 
+                            ? targetDate.title! 
+                            : DateFormat.yMMMd().format(endDate),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
+                        onPressed: () => _editTitle(context, provider, index, targetDate.title),
+                      )
+                    ],
+                  ),
                 ),
-                IconButton(
+                Text(
+                  '(Total: $totalDays)',
+                   style: const TextStyle(color: Colors.grey),
+                ),
+                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => provider.removeEndDate(index),
                 ),
               ],
             ),
+             if (targetDate.title != null && targetDate.title!.isNotEmpty)
+                Text('${DateFormat.yMMMd().format(endDate)}', style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 8),
             Text('Days Passed: $daysPassed (${_formatDuration(start, today)})'),
             Text('Days Remaining: $daysRemaining (${_formatDuration(today, end)})'),
@@ -148,6 +168,36 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _editTitle(BuildContext context, DateProvider provider, int index, String? currentTitle) async {
+    final controller = TextEditingController(text: currentTitle);
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Title'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Enter title (e.g. CSAT)'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                provider.updateTargetDateTitle(index, controller.text);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
