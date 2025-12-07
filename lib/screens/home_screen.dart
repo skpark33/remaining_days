@@ -3,15 +3,24 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/date_data.dart';
 import '../providers/date_provider.dart';
+import '../providers/locale_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Remaining Days'),
+        title: Text(l10n.appTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => _showSettings(context),
+          ),
+        ],
       ),
       body: Consumer<DateProvider>(
         builder: (context, provider, child) {
@@ -25,9 +34,9 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildStartDateSection(context, provider, startDate),
                 const SizedBox(height: 20),
-                const Text(
-                  'Target Dates',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.targetDates,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 Expanded(
@@ -52,10 +61,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildStartDateSection(BuildContext context, DateProvider provider, DateTime? startDate) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: ListTile(
-        title: const Text('Start Date'),
-        subtitle: Text(startDate != null ? DateFormat.yMMMd().format(startDate) : 'Not set'),
+        title: Text(l10n.startDate),
+        subtitle: Text(startDate != null ? DateFormat.yMMMd().format(startDate) : l10n.notSet),
         trailing: const Icon(Icons.calendar_today),
         onTap: () async {
           final picked = await showDatePicker(
@@ -73,11 +83,12 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildEndDateCard(BuildContext context, DateProvider provider, DateTime? startDate, TargetDate targetDate, int index) {
+    final l10n = AppLocalizations.of(context)!;
     if (startDate == null) {
       return Card(
         child: ListTile(
           title: Text(DateFormat.yMMMd().format(targetDate.date)),
-          subtitle: const Text('Please set a start date to see calculations.'),
+          subtitle: Text(l10n.pleaseSetStartDate),
           trailing: IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () => provider.removeEndDate(index),
@@ -141,7 +152,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '(Total: $totalDays)',
+                  '(${l10n.total}: $totalDays)',
                    style: const TextStyle(color: Colors.grey),
                 ),
                  IconButton(
@@ -151,12 +162,12 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
              if (targetDate.title != null && targetDate.title!.isNotEmpty)
-                Text('${DateFormat.yMMMd().format(endDate)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                Text(DateFormat.yMMMd().format(endDate), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('Days Passed: $daysPassed (${_formatDuration(start, today)})'),
+            Text('${l10n.daysPassed}: $daysPassed (${_formatDuration(start, today)})'),
             Row(
               children: [
-                const Text('Days Remaining: '),
+                Text('${l10n.daysRemaining}: '),
                 Text(
                   '$daysRemaining',
                   style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
@@ -170,8 +181,8 @@ class HomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Passed: $pPassedStr%'),
-                Text('Remaining: $pRemainingStr%'),
+                Text('${l10n.passed}: $pPassedStr%'),
+                Text('${l10n.remaining}: $pRemainingStr%'),
               ],
             ),
           ],
@@ -181,6 +192,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _editTargetDate(BuildContext context, DateProvider provider, int index, TargetDate currentTarget) async {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: currentTarget.title);
     DateTime selectedDate = currentTarget.date;
 
@@ -190,19 +202,19 @@ class HomeScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Edit Target Date'),
+              title: Text(l10n.editTargetDate),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: controller,
-                    decoration: const InputDecoration(labelText: 'Title', hintText: 'e.g. CSAT'),
+                    decoration: InputDecoration(labelText: l10n.title, hintText: l10n.enterTitle),
                     autofocus: true,
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Text('Date: '),
+                      Text('${l10n.date}: '),
                       TextButton(
                         onPressed: () async {
                            final picked = await showDatePicker(
@@ -226,7 +238,7 @@ class HomeScreen extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () {
@@ -236,11 +248,46 @@ class HomeScreen extends StatelessWidget {
                     );
                     Navigator.pop(context);
                   },
-                  child: const Text('Save'),
+                  child: Text(l10n.save),
                 ),
               ],
             );
           }
+        );
+      },
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: Text(l10n.selectLanguage),
+          children: [
+            SimpleDialogOption(
+              onPressed: () {
+                Provider.of<LocaleProvider>(context, listen: false).setLocale(const Locale('en'));
+                Navigator.pop(context);
+              },
+              child: const Text('English'),
+            ),
+            SimpleDialogOption(
+              onPressed: () {
+                Provider.of<LocaleProvider>(context, listen: false).setLocale(const Locale('ko'));
+                Navigator.pop(context);
+              },
+              child: const Text('한국어'),
+            ),
+            SimpleDialogOption(
+              onPressed: () {
+                Provider.of<LocaleProvider>(context, listen: false).setLocale(const Locale('ja'));
+                Navigator.pop(context);
+              },
+              child: const Text('日本語'),
+            ),
+          ],
         );
       },
     );

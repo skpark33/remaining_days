@@ -1,0 +1,22 @@
+{
+  "appTitle": "残り日数",
+  "startDate": "開始日",
+  "notSet": "未設定",
+  "targetDates": "目標日",
+  "total": "合計",
+  "days": "日",
+  "daysPassed": "経過日数",
+  "daysRemaining": "残り日数",
+  "passed": "経過",
+  "remaining": "残り",
+  "editTitle": "タイトルを編集",
+  "editTargetDate": "目標日を編集",
+  "enterTitle": "タイトルを入力 (例: 試験日)",
+  "cancel": "キャンセル",
+  "save": "保存",
+  "title": "タイトル",
+  "date": "日付",
+  "settings": "設定",
+  "selectLanguage": "言語を選択",
+  "pleaseSetStartDate": "計算を表示するには開始日を設定してください。"
+}

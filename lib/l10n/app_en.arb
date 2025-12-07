@@ -1,0 +1,22 @@
+{
+  "appTitle": "Remaining Days",
+  "startDate": "Start Date",
+  "notSet": "Not set",
+  "targetDates": "Target Dates",
+  "total": "Total",
+  "days": "days",
+  "daysPassed": "Days Passed",
+  "daysRemaining": "Days Remaining",
+  "passed": "Passed",
+  "remaining": "Remaining",
+  "editTitle": "Edit Title",
+  "editTargetDate": "Edit Target Date",
+  "enterTitle": "Enter title (e.g. CSAT)",
+  "cancel": "Cancel",
+  "save": "Save",
+  "title": "Title",
+  "date": "Date",
+  "settings": "Settings",
+  "selectLanguage": "Select Language",
+  "pleaseSetStartDate": "Please set a start date to see calculations."
+}

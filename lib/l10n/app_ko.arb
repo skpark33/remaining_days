@@ -1,0 +1,22 @@
+{
+  "appTitle": "날짜 계산기",
+  "startDate": "시작일",
+  "notSet": "설정안됨",
+  "targetDates": "목표일",
+  "total": "전체",
+  "days": "일",
+  "daysPassed": "지난 날짜",
+  "daysRemaining": "남은 날짜",
+  "passed": "진행률",
+  "remaining": "잔여율",
+  "editTitle": "제목 수정",
+  "editTargetDate": "목표일 수정",
+  "enterTitle": "제목 입력 (예: 수능)",
+  "cancel": "취소",
+  "save": "저장",
+  "title": "제목",
+  "date": "날짜",
+  "settings": "설정",
+  "selectLanguage": "언어 선택",
+  "pleaseSetStartDate": "계산을 보려면 시작일을 설정하세요."
+}
