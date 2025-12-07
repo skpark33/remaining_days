@@ -36,8 +36,9 @@ class DateProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateTargetDateTitle(int index, String title) async {
-    _dateData.endDates[index].title = title;
+  Future<void> updateTargetDate(int index, TargetDate updatedTargetDate) async {
+    _dateData.endDates[index] = updatedTargetDate;
+    _dateData.endDates.sort(); // Re-sort as date might have changed
     await _storageService.saveDateData(_dateData);
     notifyListeners();
   }

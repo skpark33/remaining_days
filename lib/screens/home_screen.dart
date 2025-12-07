@@ -135,7 +135,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
-                        onPressed: () => _editTitle(context, provider, index, targetDate.title),
+                        onPressed: () => _editTargetDate(context, provider, index, targetDate),
                       )
                     ],
                   ),
@@ -180,31 +180,67 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _editTitle(BuildContext context, DateProvider provider, int index, String? currentTitle) async {
-    final controller = TextEditingController(text: currentTitle);
+  Future<void> _editTargetDate(BuildContext context, DateProvider provider, int index, TargetDate currentTarget) async {
+    final controller = TextEditingController(text: currentTarget.title);
+    DateTime selectedDate = currentTarget.date;
+
     await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Title'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: 'Enter title (e.g. CSAT)'),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                provider.updateTargetDateTitle(index, controller.text);
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Target Date'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(labelText: 'Title', hintText: 'e.g. CSAT'),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('Date: '),
+                      TextButton(
+                        onPressed: () async {
+                           final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(1950),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              selectedDate = picked;
+                            });
+                          }
+                        },
+                        child: Text(DateFormat.yMMMd().format(selectedDate)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    provider.updateTargetDate(
+                      index, 
+                      TargetDate(date: selectedDate, title: controller.text),
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          }
         );
       },
     );
