@@ -305,7 +305,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
                Text(l10n.daysPassed),
                Text(
                  '$daysPassed (${_formatDuration(start, today)})',
-                 style: const TextStyle(fontWeight: FontWeight.bold),
+                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                ),
              ],
            ),
@@ -401,6 +401,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
               l10n.assetAchieved, 
               _formatMoney(displayCurrent, targetCurrency),
               isBold: true,
+              fontSize: 16,
             ),
             _buildFinancialRow(
               l10n.assetRemaining, 
