@@ -18,5 +18,19 @@
   "date": "日付",
   "settings": "設定",
   "selectLanguage": "言語を選択",
-  "pleaseSetStartDate": "計算を表示するには開始日を設定してください。"
+  "pleaseSetStartDate": "計算を表示するには開始日を設定してください。",
+  "assetGoals": "資産目標",
+  "assetAchieved": "資産達成額",
+  "assetRemaining": "資産残額",
+  "achieved": "達成率",
+  "setFinancialGoals": "資産目標設定",
+  "rate": "レート",
+  "edit": "編集",
+  "currency": "通貨",
+  "financialSectionTitle": "資産セクションのタイトル",
+  "assetGoalAmount": "目標資産額",
+  "currentAssetAmount": "現在資産額",
+  "enterExchangeRate": "レート入力",
+  "enterExchangeRateDesc": "現在のウォン/ドルレートを入力してください。",
+  "financialTitleHint": "資産セクションのタイトル (例: 資産目標)"
 }

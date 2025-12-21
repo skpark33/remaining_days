@@ -57,17 +57,18 @@ class _TargetDateCardState extends State<TargetDateCard> {
   }
 
   Future<void> _showManualRateDialog() async {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController controller = TextEditingController(text: _exchangeRate?.toString() ?? '');
     await showDialog(
       context: context,
       barrierDismissible: true, 
       builder: (context) {
         return AlertDialog(
-          title: const Text('Enter Exchange Rate'),
+          title: Text(l10n.enterExchangeRate),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Enter the current USD to KRW rate.'),
+              Text(l10n.enterExchangeRateDesc),
               TextField(
                 controller: controller,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -78,7 +79,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
           actions: [
              TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () async {
@@ -98,7 +99,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
                    }
                  }
               },
-              child: const Text('Save'),
+              child: Text(l10n.save),
             ),
           ],
         );
@@ -280,6 +281,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
   }
 
   Widget _buildExpandedContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Financial Data Logic
     // Input currency is widget.targetDate.currency (default KRW)
     // Display currency is based on _showInUsd
@@ -291,7 +293,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: TextButton(
           onPressed: () => _editTargetDate(context, Provider.of<DateProvider>(context, listen: false)),
-          child: const Text('Set Financial Goals'),
+          child: Text(l10n.setFinancialGoals),
         ),
       );
     }
@@ -331,7 +333,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
              Row(
                children: [
                  Text(
-                   widget.targetDate.financialTitle ?? 'Asset Goals', 
+                   widget.targetDate.financialTitle ?? l10n.assetGoals, 
                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
                  ),
                  const SizedBox(width: 8),
@@ -347,14 +349,14 @@ class _TargetDateCardState extends State<TargetDateCard> {
                    InkWell(
                      onTap: () => _showManualRateDialog(),
                      child: Text(
-                       'Rate: ${_exchangeRate!.toStringAsFixed(1)}', 
+                       '${l10n.rate}: ${_exchangeRate!.toStringAsFixed(1)}', 
                        style: const TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
                      ),
                    ),
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => _editTargetDate(context, Provider.of<DateProvider>(context, listen: false)),
-                  child: const Text('Edit'),
+                  child: Text(l10n.edit),
                 ),
                 TextButton(
                   onPressed: _toggleCurrency,
@@ -368,9 +370,9 @@ class _TargetDateCardState extends State<TargetDateCard> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildFinancialRow('Asset Achieved', _formatMoney(displayCurrent, _showInUsd)),
+            _buildFinancialRow(l10n.assetAchieved, _formatMoney(displayCurrent, _showInUsd)),
             _buildFinancialRow(
-              'Asset Remaining', 
+              l10n.assetRemaining, 
               _formatMoney(remainingAmount, _showInUsd),
               isBold: true,
               color: Colors.red,
@@ -389,10 +391,10 @@ class _TargetDateCardState extends State<TargetDateCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Achieved: ${(achievementRate * 100).toStringAsFixed(1)}%',
+              '${l10n.achieved}: ${(achievementRate * 100).toStringAsFixed(1)}%',
             ),
             Text(
-               'Remaining: ${((1.0 - achievementRate) * 100).clamp(0.0, 100.0).toStringAsFixed(1)}%',
+               '${l10n.remaining}: ${((1.0 - achievementRate) * 100).clamp(0.0, 100.0).toStringAsFixed(1)}%',
             ),
           ],
         ),
@@ -423,7 +425,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
   Future<void> _editTargetDate(BuildContext context, DateProvider provider) async {
     final l10n = AppLocalizations.of(context)!;
     final titleController = TextEditingController(text: widget.targetDate.title);
-    final financialTitleController = TextEditingController(text: widget.targetDate.financialTitle ?? 'Asset Goals');
+    final financialTitleController = TextEditingController(text: widget.targetDate.financialTitle ?? l10n.assetGoals);
     final goalController = TextEditingController(text: widget.targetDate.goalAmount?.toStringAsFixed(0) ?? '');
     final currentController = TextEditingController(text: widget.targetDate.currentAmount?.toStringAsFixed(0) ?? '');
     
@@ -475,11 +477,11 @@ class _TargetDateCardState extends State<TargetDateCard> {
                     const Divider(),
                     TextField(
                       controller: financialTitleController,
-                      decoration: const InputDecoration(labelText: 'Financial Section Title (e.g. Asset Goals)'),
+                      decoration: InputDecoration(labelText: l10n.financialTitleHint),
                     ),
                     Row(
                       children: [
-                        const Text('Currency: '),
+                        Text('${l10n.currency}: '),
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           value: currency,
@@ -514,12 +516,12 @@ class _TargetDateCardState extends State<TargetDateCard> {
                      TextField(
                       controller: goalController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Asset Goal Amount'),
+                      decoration: InputDecoration(labelText: l10n.assetGoalAmount),
                     ),
                     TextField(
                       controller: currentController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Current Asset Amount'),
+                      decoration: InputDecoration(labelText: l10n.currentAssetAmount),
                     ),
                   ],
                 ),

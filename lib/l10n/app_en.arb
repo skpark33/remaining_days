@@ -18,5 +18,19 @@
   "date": "Date",
   "settings": "Settings",
   "selectLanguage": "Select Language",
-  "pleaseSetStartDate": "Please set a start date to see calculations."
+  "pleaseSetStartDate": "Please set a start date to see calculations.",
+  "assetGoals": "Asset Goals",
+  "assetAchieved": "Asset Achieved",
+  "assetRemaining": "Asset Remaining",
+  "achieved": "Achieved",
+  "setFinancialGoals": "Set Financial Goals",
+  "rate": "Rate",
+  "edit": "Edit",
+  "currency": "Currency",
+  "financialSectionTitle": "Financial Section Title",
+  "assetGoalAmount": "Asset Goal Amount",
+  "currentAssetAmount": "Current Asset Amount",
+  "enterExchangeRate": "Enter Exchange Rate",
+  "enterExchangeRateDesc": "Enter the current USD to KRW rate.",
+  "financialTitleHint": "Financial Section Title (e.g. Asset Goals)"
 }

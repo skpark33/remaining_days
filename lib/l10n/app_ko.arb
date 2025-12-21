@@ -18,5 +18,19 @@
   "date": "날짜",
   "settings": "설정",
   "selectLanguage": "언어 선택",
-  "pleaseSetStartDate": "계산을 보려면 시작일을 설정하세요."
+  "pleaseSetStartDate": "계산을 보려면 시작일을 설정하세요.",
+  "assetGoals": "자산 목표",
+  "assetAchieved": "자산 달성액",
+  "assetRemaining": "자산 잔액",
+  "achieved": "달성률",
+  "setFinancialGoals": "자산 목표 설정",
+  "rate": "환율",
+  "edit": "편집",
+  "currency": "통화",
+  "financialSectionTitle": "자산 섹션 제목",
+  "assetGoalAmount": "목표 자산 금액",
+  "currentAssetAmount": "현재 자산 금액",
+  "enterExchangeRate": "환율 입력",
+  "enterExchangeRateDesc": "현재 원/달러 환율을 입력하세요.",
+  "financialTitleHint": "자산 섹션 제목 (예: 자산 목표)"
 }
