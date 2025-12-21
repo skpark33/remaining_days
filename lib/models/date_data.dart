@@ -3,13 +3,25 @@ import 'dart:convert';
 class TargetDate implements Comparable<TargetDate> {
   DateTime date;
   String? title;
+  double? goalAmount;
+  double? currentAmount;
+  String? currency; // 'KRW' or 'USD'
 
-  TargetDate({required this.date, this.title});
+  TargetDate({
+    required this.date, 
+    this.title, 
+    this.goalAmount, 
+    this.currentAmount, 
+    this.currency
+  });
 
   Map<String, dynamic> toJson() {
     return {
       'date': date.toIso8601String(),
       'title': title,
+      'goalAmount': goalAmount,
+      'currentAmount': currentAmount,
+      'currency': currency,
     };
   }
 
@@ -17,6 +29,9 @@ class TargetDate implements Comparable<TargetDate> {
     return TargetDate(
       date: DateTime.parse(json['date']),
       title: json['title'],
+      goalAmount: json['goalAmount']?.toDouble(),
+      currentAmount: json['currentAmount']?.toDouble(),
+      currency: json['currency'],
     );
   }
 

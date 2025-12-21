@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/date_data.dart';
 import '../providers/date_provider.dart';
 import '../providers/locale_provider.dart';
+import '../widgets/target_date_card.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -96,165 +97,11 @@ class HomeScreen extends StatelessWidget {
         ),
       );
     }
-
-    final now = DateTime.now();
-    final endDate = targetDate.date;
-    // Normalize dates to ignore time components for day calculations
-    final start = DateTime(startDate.year, startDate.month, startDate.day);
-    final end = DateTime(endDate.year, endDate.month, endDate.day);
-    final today = DateTime(now.year, now.month, now.day);
-
-    final totalDays = end.difference(start).inDays;
-    final daysPassed = today.difference(start).inDays;
-    final daysRemaining = end.difference(today).inDays;
-
-    double percentPassed = 0.0;
-    double percentRemaining = 0.0;
-
-    if (totalDays > 0) {
-      percentPassed = (daysPassed / totalDays).clamp(0.0, 1.0);
-      percentRemaining = 1.0 - percentPassed;
-    } else if (totalDays == 0) {
-        // If start and end are same day
-        percentPassed = 1.0;
-        percentRemaining = 0.0;
-    }
     
-    // Formatting percentages
-    final pPassedStr = (percentPassed * 100).toStringAsFixed(2);
-    final pRemainingStr = (percentRemaining * 100).toStringAsFixed(2);
-
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                       Text(
-                        targetDate.title != null && targetDate.title!.isNotEmpty 
-                            ? targetDate.title! 
-                            : DateFormat.yMMMd().format(endDate),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
-                        onPressed: () => _editTargetDate(context, provider, index, targetDate),
-                      )
-                    ],
-                  ),
-                ),
-                Text(
-                  '(${l10n.total}: $totalDays)',
-                   style: const TextStyle(color: Colors.grey),
-                ),
-                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => provider.removeEndDate(index),
-                ),
-              ],
-            ),
-             if (targetDate.title != null && targetDate.title!.isNotEmpty)
-                Text(DateFormat.yMMMd().format(endDate), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('${l10n.daysPassed}: $daysPassed (${_formatDuration(start, today)})'),
-            Row(
-              children: [
-                Text('${l10n.daysRemaining}: '),
-                Text(
-                  '$daysRemaining',
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Text(' (${_formatDuration(today, end)})'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(value: percentPassed),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${l10n.passed}: $pPassedStr%'),
-                Text('${l10n.remaining}: $pRemainingStr%'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _editTargetDate(BuildContext context, DateProvider provider, int index, TargetDate currentTarget) async {
-    final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(text: currentTarget.title);
-    DateTime selectedDate = currentTarget.date;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(l10n.editTargetDate),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(labelText: l10n.title, hintText: l10n.enterTitle),
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text('${l10n.date}: '),
-                      TextButton(
-                        onPressed: () async {
-                           final picked = await showDatePicker(
-                            context: context,
-                            initialDate: selectedDate,
-                            firstDate: DateTime(1950),
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              selectedDate = picked;
-                            });
-                          }
-                        },
-                        child: Text(DateFormat.yMMMd().format(selectedDate)),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.cancel),
-                ),
-                TextButton(
-                  onPressed: () {
-                    provider.updateTargetDate(
-                      index, 
-                      TargetDate(date: selectedDate, title: controller.text),
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: Text(l10n.save),
-                ),
-              ],
-            );
-          }
-        );
-      },
+    return TargetDateCard(
+      startDate: startDate,
+      targetDate: targetDate,
+      index: index,
     );
   }
 
