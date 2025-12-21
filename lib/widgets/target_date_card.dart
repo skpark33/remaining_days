@@ -57,17 +57,17 @@ class _TargetDateCardState extends State<TargetDateCard> {
   }
 
   Future<void> _showManualRateDialog() async {
-    final TextEditingController controller = TextEditingController();
+    final TextEditingController controller = TextEditingController(text: _exchangeRate?.toString() ?? '');
     await showDialog(
       context: context,
-      barrierDismissible: false, // Force input if it's the only way
+      barrierDismissible: true, 
       builder: (context) {
         return AlertDialog(
           title: const Text('Enter Exchange Rate'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Unable to fetch exchange rate. Please enter the current USD to KRW rate.'),
+              const Text('Enter the current USD to KRW rate.'),
               TextField(
                 controller: controller,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -76,12 +76,26 @@ class _TargetDateCardState extends State<TargetDateCard> {
             ],
           ),
           actions: [
+             TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
             TextButton(
               onPressed: () async {
                  final val = double.tryParse(controller.text);
                  if (val != null && val > 0) {
                    await _exchangeRateService.setManualRate(val);
                    Navigator.pop(context);
+                   
+                   // If called from InkWell, we might want to refresh immediately.
+                   // The state update usually happens via _fetchExchangeRate chain or parent refresh.
+                   // But here we might be strictly inside the dialog.
+                   // So we should trigger a refresh of the rate in the widget state.
+                   if (mounted) {
+                     setState(() {
+                       _exchangeRate = val;
+                     });
+                   }
                  }
               },
               child: const Text('Save'),
@@ -110,13 +124,13 @@ class _TargetDateCardState extends State<TargetDateCard> {
   
   String _formatMoney(double amount, bool isUsdView) {
     if (isUsdView) {
-      final formatter = NumberFormat.currency(locale: 'en_US', symbol: '\$');
+      final formatter = NumberFormat.currency(locale: 'en_US', symbol: '\$ ');
       return formatter.format(amount);
     } else {
       // KRW
       // User asked for "1000 unit comma" and "symbol".
-      // Standard KRW formatting: ₩10,000
-      final formatter = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+      // Standard KRW formatting: ₩ 10,000
+      final formatter = NumberFormat.currency(locale: 'ko_KR', symbol: '₩ ');
       return formatter.format(amount);
     }
   }
@@ -154,11 +168,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
             // Header Row (Always Visible)
             _buildHeaderRow(context, l10n, totalDays, endDate),
             
-             if (widget.targetDate.title != null && widget.targetDate.title!.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(DateFormat.yMMMd().format(endDate), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
-                ),
+
 
             const SizedBox(height: 8),
             
@@ -198,26 +208,41 @@ class _TargetDateCardState extends State<TargetDateCard> {
         Expanded(
           child: Row(
             children: [
+                Row(
+                  children: [
+                    Text(
+                      widget.targetDate.title != null && widget.targetDate.title!.isNotEmpty 
+                          ? widget.targetDate.title! 
+                          : '',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      DateFormat.yMMMd().format(endDate),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueGrey),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
                 Text(
-                widget.targetDate.title != null && widget.targetDate.title!.isNotEmpty 
-                    ? widget.targetDate.title! 
-                    : DateFormat.yMMMd().format(endDate),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
-                onPressed: () => _editTargetDate(context, provider),
-              )
+                  '(${l10n.total}: $totalDays)',
+                  style: const TextStyle(color: Colors.grey),
+                ),
             ],
           ),
         ),
-        Text(
-          '(${l10n.total}: $totalDays)',
-            style: const TextStyle(color: Colors.grey),
-        ),
-          IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () => provider.removeEndDate(widget.index),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
+              onPressed: () => _editTargetDate(context, provider),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => provider.removeEndDate(widget.index),
+            ),
+          ],
         ),
       ],
     );
@@ -225,19 +250,31 @@ class _TargetDateCardState extends State<TargetDateCard> {
 
   Widget _buildProgressInfo(AppLocalizations l10n, int daysPassed, int daysRemaining, DateTime start, DateTime today, DateTime end) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-         Text('${l10n.daysPassed}: $daysPassed (${_formatDuration(start, today)})'),
-          Row(
-            children: [
-              Text('${l10n.daysRemaining}: '),
-              Text(
-                '$daysRemaining',
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Text(' (${_formatDuration(today, end)})'),
-            ],
-          ),
+         Padding(
+           padding: const EdgeInsets.symmetric(vertical: 2.0),
+           child: Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               Text(l10n.daysPassed),
+               Text('$daysPassed (${_formatDuration(start, today)})'),
+             ],
+           ),
+         ),
+         Padding(
+           padding: const EdgeInsets.symmetric(vertical: 2.0),
+           child: Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               Text(l10n.daysRemaining),
+               Text(
+                 '$daysRemaining (${_formatDuration(today, end)})',
+                 style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
+               ),
+             ],
+           ),
+         ),
       ],
     );
   }
@@ -291,8 +328,20 @@ class _TargetDateCardState extends State<TargetDateCard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Asset Goals', style: TextStyle(fontWeight: FontWeight.bold)),
-            Row(
+             Row(
+               children: [
+                 Text(
+                   widget.targetDate.financialTitle ?? 'Asset Goals', 
+                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                 ),
+                 const SizedBox(width: 8),
+                 Text(
+                   _formatMoney(displayGoal, _showInUsd),
+                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueGrey),
+                 ),
+               ],
+             ),
+             Row(
               children: [
                 if (_exchangeRate != null)
                    InkWell(
@@ -315,41 +364,57 @@ class _TargetDateCardState extends State<TargetDateCard> {
             ),
           ],
         ),
-        _buildFinancialRow('Target', _formatMoney(displayGoal, _showInUsd)),
-        _buildFinancialRow('Current', _formatMoney(displayCurrent, _showInUsd)),
-        _buildFinancialRow('Remaining', _formatMoney(remainingAmount, _showInUsd), isBold: true),
-        const SizedBox(height: 4),
-         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const SizedBox(height: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Achievement Rate:'),
-            Text(
-              '${(achievementRate * 100).toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: achievementRate >= 1.0 ? Colors.green : Colors.orange,
-              ),
+            _buildFinancialRow('Asset Achieved', _formatMoney(displayCurrent, _showInUsd)),
+            _buildFinancialRow(
+              'Asset Remaining', 
+              _formatMoney(remainingAmount, _showInUsd),
+              isBold: true,
+              color: Colors.red,
+              fontSize: 16,
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         LinearProgressIndicator(
           value: achievementRate, 
           backgroundColor: Colors.grey[200],
           color: achievementRate >= 1.0 ? Colors.green : Colors.blue,
         ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Achieved: ${(achievementRate * 100).toStringAsFixed(1)}%',
+            ),
+            Text(
+               'Remaining: ${((1.0 - achievementRate) * 100).clamp(0.0, 100.0).toStringAsFixed(1)}%',
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildFinancialRow(String label, String value, {bool isBold = false}) {
+  Widget _buildFinancialRow(String label, String value, {bool isBold = false, Color? color, double? fontSize}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text(value, style: isBold ? const TextStyle(fontWeight: FontWeight.bold) : null),
+          Text(
+            value, 
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: color,
+              fontSize: fontSize,
+            )
+          ),
         ],
       ),
     );
@@ -358,6 +423,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
   Future<void> _editTargetDate(BuildContext context, DateProvider provider) async {
     final l10n = AppLocalizations.of(context)!;
     final titleController = TextEditingController(text: widget.targetDate.title);
+    final financialTitleController = TextEditingController(text: widget.targetDate.financialTitle ?? 'Asset Goals');
     final goalController = TextEditingController(text: widget.targetDate.goalAmount?.toStringAsFixed(0) ?? '');
     final currentController = TextEditingController(text: widget.targetDate.currentAmount?.toStringAsFixed(0) ?? '');
     
@@ -407,6 +473,10 @@ class _TargetDateCardState extends State<TargetDateCard> {
                       ],
                     ),
                     const Divider(),
+                    TextField(
+                      controller: financialTitleController,
+                      decoration: const InputDecoration(labelText: 'Financial Section Title (e.g. Asset Goals)'),
+                    ),
                     Row(
                       children: [
                         const Text('Currency: '),
@@ -469,6 +539,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
                         goalAmount: double.tryParse(goalController.text.replaceAll(',', ''))?.floorToDouble(),
                         currentAmount: double.tryParse(currentController.text.replaceAll(',', ''))?.floorToDouble(),
                         currency: currency,
+                        financialTitle: financialTitleController.text,
                       ),
                     );
                     Navigator.pop(context);

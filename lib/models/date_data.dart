@@ -6,13 +6,15 @@ class TargetDate implements Comparable<TargetDate> {
   double? goalAmount;
   double? currentAmount;
   String? currency; // 'KRW' or 'USD'
+  String? financialTitle;
 
   TargetDate({
-    required this.date, 
-    this.title, 
-    this.goalAmount, 
-    this.currentAmount, 
-    this.currency
+    required this.date,
+    this.title,
+    this.goalAmount,
+    this.currentAmount,
+    this.currency,
+    this.financialTitle,
   });
 
   Map<String, dynamic> toJson() {
@@ -22,6 +24,7 @@ class TargetDate implements Comparable<TargetDate> {
       'goalAmount': goalAmount,
       'currentAmount': currentAmount,
       'currency': currency,
+      'financialTitle': financialTitle,
     };
   }
 
@@ -32,6 +35,7 @@ class TargetDate implements Comparable<TargetDate> {
       goalAmount: json['goalAmount']?.toDouble(),
       currentAmount: json['currentAmount']?.toDouble(),
       currency: json['currency'],
+      financialTitle: json['financialTitle'],
     );
   }
 
