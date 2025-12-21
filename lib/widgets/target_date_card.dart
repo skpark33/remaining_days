@@ -355,14 +355,9 @@ class _TargetDateCardState extends State<TargetDateCard> {
     // Determine if we have a valid rate for display purposes (just for info)
     // We show the rate used for conversion if it's not 1:1
     String rateInfo = '';
-    if (sourceCurrency != targetCurrency && _exchangeRates.isNotEmpty) {
-       // Show e.g. "Rate: 1400"
-       // If converting USD -> KRW, use KRW rate.
-       double rate = 0;
-       if (sourceCurrency == 'USD') rate = _exchangeRates[targetCurrency] ?? 0;
-       else if (targetCurrency == 'USD') rate = _exchangeRates[sourceCurrency] ?? 0;
-       
-       if (rate > 0) rateInfo = 'Rate: ${rate.toStringAsFixed(1)}';
+    if (targetCurrency != 'USD' && _exchangeRates.isNotEmpty) {
+       double rate = _exchangeRates[targetCurrency] ?? 0;
+       if (rate > 0) rateInfo = '${l10n.rate}: ${rate.toStringAsFixed(1)}';
     }
 
     return Column(
@@ -521,22 +516,27 @@ class _TargetDateCardState extends State<TargetDateCard> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
                     const Divider(),
+                    const SizedBox(height: 24),
                     TextField(
                       controller: financialTitleController,
                       decoration: InputDecoration(labelText: l10n.financialTitleHint),
                     ),
+                    const SizedBox(height: 24),
                     // Currency Dropdown Removed
                      TextField(
                       controller: goalController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(labelText: '${l10n.assetGoalAmount} ($targetCurrency)'),
                     ),
+                    const SizedBox(height: 24),
                     TextField(
                       controller: currentController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(labelText: '${l10n.currentAssetAmount} ($targetCurrency)'),
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
