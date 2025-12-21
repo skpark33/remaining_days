@@ -24,41 +24,72 @@ class TargetDateCard extends StatefulWidget {
 
 class _TargetDateCardState extends State<TargetDateCard> {
   bool _isExpanded = false;
-  bool _showInUsd = false;
-  double? _exchangeRate;
+  Map<String, double> _exchangeRates = {};
   final ExchangeRateService _exchangeRateService = ExchangeRateService();
 
   @override
   void initState() {
     super.initState();
-    // Default to currency preference if we want, but user said 'toggle'
-    // Let's check if we have data to determine default view, 
-    // but the request implies a realtime toggle.
-    // 'targetDate.currency' is for INPUT values.
   }
 
-  Future<void> _fetchExchangeRate() async {
-    // Try to get rate
-    double? rate = await _exchangeRateService.getUsdToKrwRate();
-    
-    // If rate is null (API failed + no cache), we need manual input
-    if (rate == null) {
-      if (mounted) {
-        await _showManualRateDialog();
-        rate = await _exchangeRateService.getCachedRate();
-      }
+  /// returns 'USD', 'KRW', 'JPY' based on locale
+  String _getTargetCurrency(BuildContext context) {
+    final locale = Localizations.localeOf(context).languageCode;
+    switch (locale) {
+      case 'ko':
+        return 'KRW';
+      case 'ja':
+        return 'JPY';
+      case 'en':
+      default:
+        return 'USD';
     }
+  }
 
-    if (mounted && rate != null) {
+  Future<void> _fetchExchangeRates() async {
+    final rates = await _exchangeRateService.getRates();
+    if (mounted) {
       setState(() {
-        _exchangeRate = rate;
+        _exchangeRates = rates;
       });
     }
   }
 
   Future<void> _showManualRateDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    final TextEditingController controller = TextEditingController(text: _exchangeRate?.toString() ?? '');
+    final targetCurrency = _getTargetCurrency(context);
+    
+    // Determine which rate to edit: USD -> targetCurrency
+    // If target is USD, maybe show KRW and JPY?
+    // User requirement: "English -> USD".
+    // If I'm in USD, I probably don't need to convert unless I have KRW assets.
+    // If I have KRW assets and I see USD, I need KRW rate.
+    // Let's prompt for the currency relevant to the asset if possible, or just generic.
+    
+    // Simplest approach satisfying "Keep exchange rate part":
+    // If I am in KO, I edit USD->KRW.
+    // If I am in JA, I edit USD->JPY.
+    // If I am in EN, I edit USD->KRW and USD->JPY? Or just generic list?
+    
+    String rateKey = 'KRW';
+    if (targetCurrency == 'JPY') rateKey = 'JPY';
+    if (targetCurrency == 'USD') {
+      // In USD mode, we usually don't need a rate to see USD items.
+      // But if we have KRW items, we need KRW rate.
+      // Let's just default to KRW for now or show a selector if needed.
+      // But user said "Remove currency selection".
+      // Let's just allow editing KRW rate if in USD, as a fallback default.
+      rateKey = 'KRW'; 
+    }
+
+    double currentRate = _exchangeRates[rateKey] ?? 0.0;
+    // If 0, try cache
+    if (currentRate == 0.0) {
+      currentRate = await _exchangeRateService.getCachedRate(rateKey) ?? 0.0;
+    }
+
+    final TextEditingController controller = TextEditingController(text: currentRate > 0 ? currentRate.toString() : '');
+    
     await showDialog(
       context: context,
       barrierDismissible: true, 
@@ -72,7 +103,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
               TextField(
                 controller: controller,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'KRW / USD', hintText: 'e.g. 1400'),
+                decoration: InputDecoration(labelText: 'USD -> $rateKey', hintText: 'e.g. 1400'),
               ),
             ],
           ),
@@ -85,18 +116,9 @@ class _TargetDateCardState extends State<TargetDateCard> {
               onPressed: () async {
                  final val = double.tryParse(controller.text);
                  if (val != null && val > 0) {
-                   await _exchangeRateService.setManualRate(val);
+                   await _exchangeRateService.setManualRate(rateKey, val);
+                   await _fetchExchangeRates(); // Refresh rates
                    Navigator.pop(context);
-                   
-                   // If called from InkWell, we might want to refresh immediately.
-                   // The state update usually happens via _fetchExchangeRate chain or parent refresh.
-                   // But here we might be strictly inside the dialog.
-                   // So we should trigger a refresh of the rate in the widget state.
-                   if (mounted) {
-                     setState(() {
-                       _exchangeRate = val;
-                     });
-                   }
                  }
               },
               child: Text(l10n.save),
@@ -112,28 +134,51 @@ class _TargetDateCardState extends State<TargetDateCard> {
       _isExpanded = !_isExpanded;
     });
 
-    if (_isExpanded && _exchangeRate == null) {
-      await _fetchExchangeRate();
+    if (_isExpanded && _exchangeRates.isEmpty) {
+      await _fetchExchangeRates();
     }
-  }
-
-  void _toggleCurrency() {
-    setState(() {
-      _showInUsd = !_showInUsd;
-    });
   }
   
-  String _formatMoney(double amount, bool isUsdView) {
-    if (isUsdView) {
-      final formatter = NumberFormat.currency(locale: 'en_US', symbol: '\$ ');
-      return formatter.format(amount);
-    } else {
-      // KRW
-      // User asked for "1000 unit comma" and "symbol".
-      // Standard KRW formatting: ₩ 10,000
-      final formatter = NumberFormat.currency(locale: 'ko_KR', symbol: '₩ ');
-      return formatter.format(amount);
+  String _formatMoney(double amount, String currencyCode) {
+    String locale = 'en_US';
+    String symbol = '\$ ';
+    if (currencyCode == 'KRW') {
+      locale = 'ko_KR';
+      symbol = '₩ ';
+    } else if (currencyCode == 'JPY') {
+      locale = 'ja_JP';
+      symbol = '¥ ';
     }
+
+    final formatter = NumberFormat.currency(locale: locale, symbol: symbol);
+    return formatter.format(amount);
+  }
+
+  /// Converts amount from [sourceCurrency] to [targetCurrency].
+  /// Uses USD as base.
+  double _convertCurrency(double amount, String sourceCurrency, String targetCurrency) {
+    if (sourceCurrency == targetCurrency) return amount;
+    
+    // Get rates (Base USD = 1.0)
+    double rateSource = 1.0;
+    if (sourceCurrency != 'USD') {
+      rateSource = _exchangeRates[sourceCurrency] ?? 0.0;
+      if (rateSource == 0.0) return amount; // Cannot convert
+    }
+    
+    double rateTarget = 1.0;
+    if (targetCurrency != 'USD') {
+      rateTarget = _exchangeRates[targetCurrency] ?? 0.0;
+      if (rateTarget == 0.0) return amount; // Cannot convert
+    }
+
+    // Convert Source -> USD
+    double amountInUsd = (sourceCurrency == 'USD') ? amount : amount / rateSource;
+    
+    // Convert USD -> Target
+    double amountInTarget = (targetCurrency == 'USD') ? amountInUsd : amountInUsd * rateTarget;
+    
+    return amountInTarget;
   }
 
   @override
@@ -161,6 +206,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
     final pRemainingStr = ((1.0 - percentPassed) * 100).toStringAsFixed(2);
 
     return Card(
+      color: _isExpanded ? Colors.blue[50] : null,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -169,8 +215,6 @@ class _TargetDateCardState extends State<TargetDateCard> {
             // Header Row (Always Visible)
             _buildHeaderRow(context, l10n, totalDays, endDate),
             
-
-
             const SizedBox(height: 8),
             
             // Standard Progress Info (Always Visible)
@@ -259,7 +303,10 @@ class _TargetDateCardState extends State<TargetDateCard> {
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
                Text(l10n.daysPassed),
-               Text('$daysPassed (${_formatDuration(start, today)})'),
+               Text(
+                 '$daysPassed (${_formatDuration(start, today)})',
+                 style: const TextStyle(fontWeight: FontWeight.bold),
+               ),
              ],
            ),
          ),
@@ -282,12 +329,9 @@ class _TargetDateCardState extends State<TargetDateCard> {
 
   Widget _buildExpandedContent(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    // Financial Data Logic
-    // Input currency is widget.targetDate.currency (default KRW)
-    // Display currency is based on _showInUsd
-    
     final double? goal = widget.targetDate.goalAmount;
     final double? current = widget.targetDate.currentAmount;
+    
     if (goal == null || current == null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -298,35 +342,31 @@ class _TargetDateCardState extends State<TargetDateCard> {
       );
     }
 
-    // Conversion Logic
-    double displayGoal = goal;
-    double displayCurrent = current;
+    final targetCurrency = _getTargetCurrency(context);
+    final sourceCurrency = widget.targetDate.currency ?? 'KRW';
     
-    if (_exchangeRate != null) {
-      final inputIsUsd = widget.targetDate.currency == 'USD';
-      
-      // Normalize to KRW first for calculation (just for ease) or handle direct conversion
-      double goalInKrw = inputIsUsd ? goal * _exchangeRate! : goal;
-      double currentInKrw = inputIsUsd ? current * _exchangeRate! : current;
-      
-      if (_showInUsd) {
-        displayGoal = goalInKrw / _exchangeRate!;
-        displayCurrent = currentInKrw / _exchangeRate!;
-      } else {
-        displayGoal = goalInKrw;
-        displayCurrent = currentInKrw;
-      }
-    } else {
-      // Fallback if rate is somehow still null (shouldn't happen with our logic)
-      // Just show raw numbers?
-    }
-
+    // Auto convert
+    double displayGoal = _convertCurrency(goal, sourceCurrency, targetCurrency);
+    double displayCurrent = _convertCurrency(current, sourceCurrency, targetCurrency);
+    
     final double achievementRate = (current / goal).clamp(0.0, 1.0);
     final double remainingAmount = displayGoal - displayCurrent;
 
+    // Determine if we have a valid rate for display purposes (just for info)
+    // We show the rate used for conversion if it's not 1:1
+    String rateInfo = '';
+    if (sourceCurrency != targetCurrency && _exchangeRates.isNotEmpty) {
+       // Show e.g. "Rate: 1400"
+       // If converting USD -> KRW, use KRW rate.
+       double rate = 0;
+       if (sourceCurrency == 'USD') rate = _exchangeRates[targetCurrency] ?? 0;
+       else if (targetCurrency == 'USD') rate = _exchangeRates[sourceCurrency] ?? 0;
+       
+       if (rate > 0) rateInfo = 'Rate: ${rate.toStringAsFixed(1)}';
+    }
+
     return Column(
       children: [
-        const Divider(),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -338,30 +378,22 @@ class _TargetDateCardState extends State<TargetDateCard> {
                  ),
                  const SizedBox(width: 8),
                  Text(
-                   _formatMoney(displayGoal, _showInUsd),
+                   _formatMoney(displayGoal, targetCurrency),
                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueGrey),
                  ),
                ],
              ),
              Row(
               children: [
-                if (_exchangeRate != null)
+                if ((rateInfo.isNotEmpty || _exchangeRates.isNotEmpty) && targetCurrency != 'USD')
                    InkWell(
                      onTap: () => _showManualRateDialog(),
                      child: Text(
-                       '${l10n.rate}: ${_exchangeRate!.toStringAsFixed(1)}', 
+                       rateInfo.isEmpty ? '${l10n.rate}*' : rateInfo, 
                        style: const TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.underline),
                      ),
                    ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () => _editTargetDate(context, Provider.of<DateProvider>(context, listen: false)),
-                  child: Text(l10n.edit),
-                ),
-                TextButton(
-                  onPressed: _toggleCurrency,
-                  child: Text(_showInUsd ? 'KRW' : 'USD'),
-                ),
+                // Currency Toggle Removed
               ],
             ),
           ],
@@ -370,10 +402,14 @@ class _TargetDateCardState extends State<TargetDateCard> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildFinancialRow(l10n.assetAchieved, _formatMoney(displayCurrent, _showInUsd)),
+            _buildFinancialRow(
+              l10n.assetAchieved, 
+              _formatMoney(displayCurrent, targetCurrency),
+              isBold: true,
+            ),
             _buildFinancialRow(
               l10n.assetRemaining, 
-              _formatMoney(remainingAmount, _showInUsd),
+              _formatMoney(remainingAmount, targetCurrency),
               isBold: true,
               color: Colors.red,
               fontSize: 16,
@@ -426,16 +462,27 @@ class _TargetDateCardState extends State<TargetDateCard> {
     final l10n = AppLocalizations.of(context)!;
     final titleController = TextEditingController(text: widget.targetDate.title);
     final financialTitleController = TextEditingController(text: widget.targetDate.financialTitle ?? l10n.assetGoals);
-    final goalController = TextEditingController(text: widget.targetDate.goalAmount?.toStringAsFixed(0) ?? '');
-    final currentController = TextEditingController(text: widget.targetDate.currentAmount?.toStringAsFixed(0) ?? '');
+    
+    // Convert stored amount to current locale currency for editing
+    final targetCurrency = _getTargetCurrency(context);
+    final sourceCurrency = widget.targetDate.currency ?? 'KRW';
+    
+    if (_exchangeRates.isEmpty) {
+        // Try fetch if missing
+        await _fetchExchangeRates();
+    }
+    
+    double? initialGoal = widget.targetDate.goalAmount;
+    double? initialCurrent = widget.targetDate.currentAmount;
+    
+    if (initialGoal != null) initialGoal = _convertCurrency(initialGoal, sourceCurrency, targetCurrency);
+    if (initialCurrent != null) initialCurrent = _convertCurrency(initialCurrent, sourceCurrency, targetCurrency);
+
+    final goalController = TextEditingController(text: initialGoal?.toStringAsFixed(0) ?? '');
+    final currentController = TextEditingController(text: initialCurrent?.toStringAsFixed(0) ?? '');
     
     DateTime selectedDate = widget.targetDate.date;
-    String currency = widget.targetDate.currency ?? 'KRW';
-
-    // Ensure we have a rate if possible
-    if (_exchangeRate == null) {
-       _exchangeRate = await _exchangeRateService.getCachedRate() ?? await _exchangeRateService.getUsdToKrwRate();
-    }
+    // We don't need currency selector. We assume input is in current local currency.
 
     await showDialog(
       context: context,
@@ -479,49 +526,16 @@ class _TargetDateCardState extends State<TargetDateCard> {
                       controller: financialTitleController,
                       decoration: InputDecoration(labelText: l10n.financialTitleHint),
                     ),
-                    Row(
-                      children: [
-                        Text('${l10n.currency}: '),
-                        const SizedBox(width: 8),
-                        DropdownButton<String>(
-                          value: currency,
-                          items: const [
-                            DropdownMenuItem(value: 'KRW', child: Text('KRW (Won)')),
-                            DropdownMenuItem(value: 'USD', child: Text('USD (Dollar)')),
-                          ],
-                          onChanged: (newCurrency) {
-                            if (newCurrency != null && newCurrency != currency) {
-                              // Perform conversion if rate is available
-                              if (_exchangeRate != null) {
-                                double? currentGoal = double.tryParse(goalController.text.replaceAll(',', ''));
-                                double? currentAsset = double.tryParse(currentController.text.replaceAll(',', ''));
-                                
-                                if (newCurrency == 'USD') {
-                                  // KRW -> USD
-                                  if (currentGoal != null) goalController.text = (currentGoal / _exchangeRate!).toStringAsFixed(0);
-                                  if (currentAsset != null) currentController.text = (currentAsset / _exchangeRate!).toStringAsFixed(0);
-                                } else {
-                                  // USD -> KRW
-                                  if (currentGoal != null) goalController.text = (currentGoal * _exchangeRate!).toStringAsFixed(0);
-                                  if (currentAsset != null) currentController.text = (currentAsset * _exchangeRate!).toStringAsFixed(0);
-                                }
-                              }
-                              
-                              setStateInternal(() => currency = newCurrency);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                    // Currency Dropdown Removed
                      TextField(
                       controller: goalController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.assetGoalAmount),
+                      decoration: InputDecoration(labelText: '${l10n.assetGoalAmount} ($targetCurrency)'),
                     ),
                     TextField(
                       controller: currentController,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.currentAssetAmount),
+                      decoration: InputDecoration(labelText: '${l10n.currentAssetAmount} ($targetCurrency)'),
                     ),
                   ],
                 ),
@@ -540,7 +554,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
                         title: titleController.text,
                         goalAmount: double.tryParse(goalController.text.replaceAll(',', ''))?.floorToDouble(),
                         currentAmount: double.tryParse(currentController.text.replaceAll(',', ''))?.floorToDouble(),
-                        currency: currency,
+                        currency: targetCurrency, // Save in current currency
                         financialTitle: financialTitleController.text,
                       ),
                     );
@@ -564,19 +578,7 @@ class _TargetDateCardState extends State<TargetDateCard> {
     if (months < 0) months = 0;
     
     DateTime dateAfterMonths = DateTime(from.year, from.month + months, from.day);
-    // Fix overflow logic same as before... simplified for this snippet validity
-    // For production safety, we should really move this to a helper/util class
-    // But for now duplicating the logic to keep this file self-contained as requested by 'TargetDateCard' refactor plan
-    // I will skip complex logic here and assume basic correctnes for brevity or import it if I refactor utils.
-    // Let's copy the robust one from HomeScreen if possible, or just use basic approximation
-    
-    // Using the one from HomeScreen would be better but I can't access private method.
-    // I will implement a quick working version.
-    
     int daysRemaining = to.difference(dateAfterMonths).inDays;
-    // Correction if dateAfterMonths is "too far" due to month length diffs?
-    // Actually DateTime logic handles it.
-
     int weeks = daysRemaining ~/ 7;
     return '$months months $weeks weeks';
   }
